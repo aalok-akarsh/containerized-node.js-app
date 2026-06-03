@@ -62,6 +62,19 @@ curl http://localhost:8090/
 curl http://localhost:8090/health
 ```
 
+Expected app responses:
+
+```
+{"source":"server","message":"Node DevOps Application Running"}
+{"source":"redis-cache","message":"Node DevOps Application Running"}
+```
+
+Expected health response:
+
+```
+{"status":"OK","mongodb":"connected","redis":"connected"}
+```
+
 ## Application URL
 
 ```
@@ -78,5 +91,9 @@ http://localhost:8090
 - MongoDB data is persisted in the `mongo_data` volume.
 - Service discovery uses Compose service names (`mongo`, `redis`).
 - Health checks are enabled for all services.
-- Dockerfile uses a multi-stage build and Alpine base for smaller images.
+- Dockerfile uses a Node Alpine base image.
 - Logging is capped via `json-file` options.
+
+## AWS Deployment
+
+Use [AWS_DEPLOY.md](AWS_DEPLOY.md) to run this replicated Docker Compose version on an EC2 instance and test it from AWS.

@@ -3,39 +3,43 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const redis = require("redis");
+const { readConfig } = require("./src/config");
+const { getHealthStatus } = require("./src/health");
 
 const app = express();
 
-const PORT = process.env.PORT || 8090;
-const MONGO_URI = process.env.MONGO_URI;
-const REDIS_HOST = process.env.REDIS_HOST;
-const REDIS_PORT = process.env.REDIS_PORT;
+const config = readConfig();
 
 /* MongoDB Connection */
-
 mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+  .connect(config.mongoUri)
+  .then(() => console.log("MongoDB connected successfully"))
+  .catch((err) => {
+    console.error("MongoDB connection error:", err.message);
+  });
 
 /* Redis Connection */
-
 const redisClient = redis.createClient({
   socket: {
-    host: REDIS_HOST,
-    port: REDIS_PORT,
+    host: config.redisHost,
+    port: config.redisPort,
   },
 });
 
+redisClient.on("error", (err) => console.error("Redis Client Error:", err));
+
 redisClient
   .connect()
-  .then(() => console.log("Redis connected"))
-  .catch((err) => console.error("Redis connection error:", err));
+  .then(() => console.log("Redis connected successfully"))
+  .catch((err) => console.error("Redis connection error:", err.message));
 
 /* Routes */
-
 app.get("/", async (req, res) => {
   try {
+    if (!redisClient.isOpen) {
+      return res.json({ source: "server", message: "Node DevOps Application Running (Redis Offline)" });
+    }
+
     const cachedData = await redisClient.get("message");
 
     if (cachedData) {
@@ -46,7 +50,6 @@ app.get("/", async (req, res) => {
     }
 
     const message = "Node DevOps Application Running";
-
     await redisClient.set("message", message);
 
     res.json({
@@ -54,6 +57,7 @@ app.get("/", async (req, res) => {
       message,
     });
   } catch (err) {
+    console.error("Route error:", err);
     res.status(500).json({
       error: "Internal Server Error",
     });
@@ -61,13 +65,14 @@ app.get("/", async (req, res) => {
 });
 
 app.get("/health", (req, res) => {
-  res.json({
-    status: "OK",
-    mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
-    redis: redisClient.isOpen ? "connected" : "disconnected",
+  const health = getHealthStatus({
+    mongoConnected: mongoose.connection.readyState === 1,
+    redisConnected: redisClient.isOpen,
   });
+
+  res.status(health.statusCode).json(health.body);
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(config.port, () => {
+  console.log(`Server listening on port ${config.port}`);
 });

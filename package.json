@@ -4,11 +4,12 @@
   "description": "Containerized Node.js app with MongoDB and Redis",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "test": "node --test"
   },
   "license": "MIT",
   "dependencies": {
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
     "express": "^4.19.2",
     "mongoose": "^7.8.0",
     "redis": "^4.6.13"
